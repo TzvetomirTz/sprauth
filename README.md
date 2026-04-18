@@ -25,7 +25,12 @@ Ensure you have the following installed:
    git clone [https://github.com/TzvetomirTz/sprauth.git](https://github.com/TzvetomirTz/sprauth.git)
    cd sprauth
 
-2. **Run the docker container:**
+2. **Generate quantum safe pub/priv keys:**
+   ```bash
+   npx tsx ./scripts/keygen.tsx
+
+3. **Run the docker container:**
    ```bash
    docker build -t sprauth-api .
    docker run -p 3000:3000 sprauth-api
+
