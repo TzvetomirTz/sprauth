@@ -1,4 +1,5 @@
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { createHash } from 'node:crypto';
 
 // Setup
 const envSecretKey = process.env.SPRAUTH_MLDSA_PRIVATE_KEY;
@@ -53,4 +54,16 @@ export const verify = (token: string) => {
 
   const decodedPayload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
   return JSON.parse(decodedPayload);
+}
+
+export const derivePQCAddress = (publicKey: Uint8Array): string => {
+    if (publicKey.length !== 1952) {
+        throw new Error("Invalid ML-DSA-65 public key length. Expected 1952 bytes.");
+    }
+
+    const hash = createHash('sha256').update(publicKey).digest();
+    const addressBytes = hash.subarray(-20);
+    const hexAddress = Buffer.from(addressBytes).toString('hex');
+    
+    return `pqc1${hexAddress}`;
 }
