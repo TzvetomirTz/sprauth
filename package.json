@@ -13,17 +13,19 @@
   "license": "MIT",
   "author": "Tzvetomir Tzvetkov",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "nodemon --exec tsx src/index.ts"
+    "start": "node dist/app.js",
+    "dev": "nodemon --exec tsx src/app.ts"
   },
   "dependencies": {
+    "@noble/post-quantum": "^0.6.1",
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@types/base64url": "^2.0.3",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "nodemon": "^3.1.14",

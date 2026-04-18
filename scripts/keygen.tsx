@@ -1,13 +1,13 @@
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
-import fs from 'node:fs';
 
 export const generateMLDSAKeys = () => {
   const { secretKey, publicKey } = ml_dsa65.keygen();
 
-  fs.writeFileSync('publicKey.bin', publicKey);
-  fs.writeFileSync('secretKey.bin', secretKey);
+  const secKeyBase64 = Buffer.from(secretKey).toString('base64');
+  const pubKeyBase64 = Buffer.from(publicKey).toString('base64');
 
-  console.log('Keys successfully saved to publicKey.bin and secretKey.bin');
+  console.log(`MLDSA_PRIVATE_KEY="${secKeyBase64}"`);
+  console.log(`MLDSA_PUBLIC_KEY="${pubKeyBase64}"`);
 };
 
 generateMLDSAKeys();
