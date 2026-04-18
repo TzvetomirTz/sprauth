@@ -1,8 +1,4 @@
-import os
-
-readme_content = """# sprauth
-
-Sprauth authentication
+#Sprauth authentication
 
 ## Features
 
