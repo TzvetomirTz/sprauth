@@ -1,4 +1,4 @@
-#Sprauth authentication
+# Sprauth authentication
 
 ## Features
 
