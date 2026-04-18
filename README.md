@@ -24,3 +24,8 @@ Ensure you have the following installed:
    ```bash
    git clone [https://github.com/TzvetomirTz/sprauth.git](https://github.com/TzvetomirTz/sprauth.git)
    cd sprauth
+
+2. **Run the docker container:**
+   ```bash
+   docker build -t sprauth-api .
+   docker run -p 3000:3000 sprauth-api
