@@ -1,12 +1,13 @@
 import { sign, verify } from './jwt.service.js'
 import { randomBytes } from 'node:crypto';
 
-export const generateAuthChallenge = async () => {
+export const generateAuthChallenge = async (identity: string) => {
     const issuedAtUnixMs = Date.now();
     const challengeString = generateSafeRandomString();
 
     const challenge = sign({
         iat: issuedAtUnixMs,
+        identity,
         challenge: challengeString
     });
 
