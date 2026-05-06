@@ -1,16 +1,6 @@
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 import { createHash } from 'node:crypto';
 
-// Setup
-const envSecretKey = process.env.SPRAUTH_MLDSA_PRIVATE_KEY;
-
-if (!envSecretKey) {
-  throw new Error("Please set SPRAUTH_MLDSA_PRIVATE_KEY env var");
-}
-
-const secretKey = new Uint8Array(Buffer.from(envSecretKey, 'base64'));
-const publicKey = ml_dsa65.getPublicKey(secretKey);
-
 const HEADER = {
   alg: 'ML-DSA-65',
   typ: 'JWT'
@@ -18,7 +8,7 @@ const HEADER = {
 
 // End of setup
 
-export const sign = async (payload: object) => {
+export const sign = async (payload: object, secretKey: Uint8Array) => {
   const encodedHeader = Buffer.from(JSON.stringify(HEADER)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
 
@@ -30,7 +20,7 @@ export const sign = async (payload: object) => {
   return `${signingInput}.${encodedSignature}`;
 }
 
-export const verify = (token: string) => {
+export const verify = (token: string, publicKey: Uint8Array) => {
   const parts = token.split('.');
   
   if (parts.length !== 3) {
