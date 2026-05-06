@@ -1,5 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
-import { generateAuthChallenge } from '../services/auth.service.js';
+import { generateAuthChallenge, getPublicKeyBase64 } from '../services/auth.service.js';
+
+export const handleGetPublicKeyReq = async (
+    req: Request, 
+    res: Response
+) => {
+    res.status(200).json({publicKey: getPublicKeyBase64()})
+}
 
 export const handleGetAuthChallengeReq = async (
     req: Request, 

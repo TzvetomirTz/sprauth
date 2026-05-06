@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { handleGetAuthChallengeReq } from '../controllers/auth.controller.js';
+import { handleGetAuthChallengeReq, handleGetPublicKeyReq } from '../controllers/auth.controller.js';
 
 const authRouter = Router();
 
+authRouter.get('/key/public', handleGetPublicKeyReq);
 authRouter.get('/challenge', handleGetAuthChallengeReq);
 
 
