@@ -9,8 +9,8 @@ export const handleGetPublicKeyReq = async (
 }
 
 export const handleGetAuthChallengeReq = async (
-    req: Request, 
-    res: Response, 
+    req: Request,
+    res: Response,
     next: NextFunction
 ): Promise<void> => {
     try {
@@ -36,10 +36,6 @@ export const handlePostAuthChallengeReq = async (
     try {
         const {challengeJwt, signature, publicKey} = req.body;
         const payload = verifySprauthSigned(challengeJwt);
-
-        console.log(payload);
-        
-        
         const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
 
         if (result.success) {

@@ -48,7 +48,7 @@ export const verifyChallengeSignature = async (
         const pubKeyBytes = new Uint8Array(Buffer.from(publicKeyBase64, 'base64'));
         const hash = createHash('sha256').update(pubKeyBytes).digest();
         const last20Bytes = hash.subarray(-20);
-        const derivedAddress = `0p${last20Bytes.toString('hex')}`;
+        const derivedAddress = `pqc1${last20Bytes.toString('hex')}`;
 
         if (derivedAddress !== claimedAddress) {
             throw new Error("Address mismatch: The provided Public Key does not match the identity.");
