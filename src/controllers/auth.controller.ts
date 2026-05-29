@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { generateAuthChallenge, getPublicKeyBase64, verifyChallengeSignature, verifySprauthSigned } from '../services/auth.service.js';
+import { generateChallenge } from '../services/auth.service.js';
+import { getPublicKeyBase64, verifyChallengeSignature, verifySprauthSigned } from '../services/sec.service.js';
 
 export const handleGetPublicKeyReq = async (
     req: Request, 
@@ -21,7 +22,7 @@ export const handleGetAuthChallengeReq = async (
             return;
         }
 
-        const challengeToken = await generateAuthChallenge(identity);
+        const challengeToken = await generateChallenge(identity);
         res.status(200).json({ challengeToken });
     } catch (error) {
         next(error);
@@ -40,6 +41,7 @@ export const handlePostAuthChallengeReq = async (
 
         if (result.success) {
             res.status(200).json({ "": "" });
+            return;
         }
 
         res.status(400).json({});
