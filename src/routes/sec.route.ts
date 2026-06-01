@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleGetPublicKeyReq } from '../controllers/auth.controller.js';
+import { handleGetPublicKeyReq } from '../controllers/sec.controller.js';
 
 const secRouter = Router();
 
