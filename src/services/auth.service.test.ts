@@ -1,92 +1,88 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { generateChallengeToken } from './auth.service.js';
+import * as secService from './sec.service.js';
 
-const mockSecret = Buffer.from(ml_dsa65.keygen().secretKey).toString('base64');
-vi.stubEnv('SPRAUTH_MLDSA_PRIVATE_KEY', mockSecret);
+vi.mock('./sec.service.js', () => ({
+    generateSafeRandomString: vi.fn(),
+    getSecretKey: vi.fn(),
+    sign: vi.fn(),
+}));
 
-import * as authService from './auth.service';
+describe('auth.service - generateChallengeToken', () => {
+    const MOCK_TIME = 1780775020000;
+    const MOCK_RANDOM_STRING = 'mocked-random-challenge-string';
+    const MOCK_SECRET_KEY = new Uint8Array(Buffer.from('super-secret-test-key'));
+    const MOCK_SIGNED_TOKEN = 'header.payload.signature';
 
-describe('auth.service', () => {
-  const testIdentity = 'user_123';
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(MOCK_TIME);
 
-  describe('getPublicKeyBase64', () => {
-    it('should return a base64 encoded string of the public key', () => {
-      const pubKey = authService.getPublicKeyBase64();
-      expect(typeof pubKey).toBe('string');
-      expect(pubKey.length).toBeGreaterThan(2000); 
-    });
-  });
-
-  describe('generateAuthChallenge', () => {
-    it('should generate a challenge token containing the identity', async () => {
-      const token = await authService.generateAuthChallenge(testIdentity);
-
-      const decoded = authService.verifySprauthSigned(token);
-      
-      expect(decoded.identity).toBe(testIdentity);
-      expect(decoded.challenge).toBeDefined();
-      expect(decoded.iat).toBeLessThanOrEqual(Date.now());
-    });
-  });
-
-  describe('verifyChallengeSignature', () => {
-    it('should verify a valid signature and return the correct address', async () => {
-      const userKeys = ml_dsa65.keygen();
-      const userPubKeyBase64 = Buffer.from(userKeys.publicKey).toString('base64');
-
-      const { createHash } = await import('node:crypto');
-      const hash = createHash('sha256').update(userKeys.publicKey).digest();
-      const expectedAddress = `pqc1${hash.subarray(-20).toString('hex')}`;
-
-      const challenge = "test-challenge-string";
-      const signature = ml_dsa65.sign(new TextEncoder().encode(challenge), userKeys.secretKey);
-      const signatureBase64 = Buffer.from(signature).toString('base64');
-
-      const result = await authService.verifyChallengeSignature(
-        challenge,
-        signatureBase64,
-        userPubKeyBase64,
-        expectedAddress
-      );
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.address).toBe(expectedAddress);
-      }
+        vi.mocked(secService.generateSafeRandomString).mockReturnValue(MOCK_RANDOM_STRING);
+        vi.mocked(secService.getSecretKey).mockReturnValue(MOCK_SECRET_KEY);
+        vi.mocked(secService.sign).mockResolvedValue(MOCK_SIGNED_TOKEN);
     });
 
-    it('should fail if the address does not match the public key', async () => {
-      const userKeys = ml_dsa65.keygen();
-      const userPubKeyBase64 = Buffer.from(userKeys.publicKey).toString('base64');
-      
-      const result = await authService.verifyChallengeSignature(
-        "challenge",
-        "sig",
-        userPubKeyBase64,
-        "pqc1-wrong-address"
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Address mismatch");
+    afterEach(() => {
+        vi.clearAllMocks();
+        vi.useRealTimers();
     });
 
-    it('should fail if the signature is invalid', async () => {
-      const userKeys = ml_dsa65.keygen();
-      const userPubKeyBase64 = Buffer.from(userKeys.publicKey).toString('base64');
+    it('should generate a token with the correct payload and secret key', async () => {
+        const customClaims = { metadata: { tier: 'premium' } };
+        
+        const result = await generateChallengeToken('mock-identity', 'mock-intent', customClaims);
 
-      const { createHash } = await import('node:crypto');
-      const hash = createHash('sha256').update(userKeys.publicKey).digest();
-      const address = `pqc1${hash.subarray(-20).toString('hex')}`;
+        expect(secService.generateSafeRandomString).toHaveBeenCalledOnce();
+        expect(secService.getSecretKey).toHaveBeenCalledOnce();
+        expect(secService.sign).toHaveBeenCalledWith(
+            {
+                metadata: { tier: 'premium' },
+                iat: MOCK_TIME,
+                identity: 'mock-identity',
+                intent: 'mock-intent',
+                challenge: MOCK_RANDOM_STRING,
+            },
+            MOCK_SECRET_KEY
+        );
 
-      const result = await authService.verifyChallengeSignature(
-        "challenge",
-        Buffer.from(new Uint8Array(2420)).toString('base64'),
-        userPubKeyBase64,
-        address
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Signature verification failed.");
+        expect(result).toBe(MOCK_SIGNED_TOKEN);
     });
-  });
+
+    it('should handle empty customClaims correctly', async () => {
+        await generateChallengeToken('mock-identity', 'mock-intent', {});
+
+        expect(secService.sign).toHaveBeenCalledWith(
+            {
+                iat: MOCK_TIME,
+                identity: 'mock-identity',
+                intent: 'mock-intent',
+                challenge: MOCK_RANDOM_STRING,
+            },
+            MOCK_SECRET_KEY
+        );
+    });
+
+    it('should prevent customClaims from overwriting reserved core claims', async () => {
+        const maliciousClaims = {
+            identity: 'fake-identity', 
+            intent: 'fake-intent',
+            iat: 999999,
+            challenge: 'fake-challenge',
+            metadata: { theme: 'dark' }
+        };
+
+        await generateChallengeToken('real-identity', 'real-intent', maliciousClaims);
+
+        expect(secService.sign).toHaveBeenCalledWith(
+            {
+                metadata: { theme: 'dark' },
+                iat: MOCK_TIME,
+                identity: 'real-identity',
+                intent: 'real-intent',
+                challenge: MOCK_RANDOM_STRING
+            },
+            MOCK_SECRET_KEY
+        );
+    });
 });

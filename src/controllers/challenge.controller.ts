@@ -8,7 +8,7 @@ export const handleInitChallengeReq = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { identity, intent, claims } = req.body;
+        const { identity, intent, customClaims } = req.body;
 
         if (!identity || typeof identity !== 'string' || identity.trim() === '') {
             res.status(400).json({ error: "Missing or invalid 'identity' query parameter." });
@@ -20,7 +20,7 @@ export const handleInitChallengeReq = async (
             return;
         }
 
-        const challengeToken = await generateChallengeToken(identity, intent, claims);
+        const challengeToken = await generateChallengeToken(identity, intent, customClaims);
         res.status(200).json({ challengeToken });
     } catch (error) {
         next(error);
