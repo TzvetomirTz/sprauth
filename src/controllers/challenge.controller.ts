@@ -34,11 +34,6 @@ export const handleVerifyChallengeReq = async (
 ): Promise<void> => {
     try {
         const {challengeJwt, signature, publicKey} = req.body;
-
-        console.log(`challengeJwt: ${challengeJwt}`);
-        console.log(`signature: ${signature}`);
-        console.log(`publicKey: ${publicKey}`);
-
         const payload = verifySprauthSigned(challengeJwt);
         const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
 
