@@ -32,7 +32,7 @@ export const generateSafeRandomString = (byteLength: number = 32): string => {
   return buffer.toString('base64url'); 
 }
 
-export const sign = async (payload: object, secretKey: Uint8Array) => {
+export const sign = (payload: object, secretKey: Uint8Array) => {
   const encodedHeader = Buffer.from(JSON.stringify(HEADER)).toString('base64url');
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
 
