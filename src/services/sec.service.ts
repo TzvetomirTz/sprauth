@@ -1,5 +1,6 @@
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 import { createHash, randomBytes } from 'node:crypto';
+import { consumeChallenge } from './redis.service.js';
 
 // Setup Start
 
@@ -44,7 +45,7 @@ export const sign = (payload: object, secretKey: Uint8Array) => {
   return `${signingInput}.${encodedSignature}`;
 }
 
-export const verifySprauthSigned = (token: string) => {
+export const verifySprauthSigned = async (token: string) => {
   const parts = token.split('.');
   
   if (parts.length !== 3) {
@@ -67,6 +68,10 @@ export const verifySprauthSigned = (token: string) => {
   }
 
   const decodedPayload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
+  const tokenId = JSON.parse(decodedPayload).tokenId;
+
+  await consumeChallenge(tokenId);
+
   return JSON.parse(decodedPayload);
 }
 

@@ -34,7 +34,7 @@ export const handleVerifyChallengeReq = async (
 ): Promise<void> => {
     try {
         const {challengeJwt, signature, publicKey} = req.body;
-        const payload = verifySprauthSigned(challengeJwt);
+        const payload = await verifySprauthSigned(challengeJwt);
         const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
 
         if (result.success) {
@@ -42,8 +42,9 @@ export const handleVerifyChallengeReq = async (
             return;
         }
 
-        res.status(401).json({ challengePassed: false });
+        res.status(401).json({ challengePassed: false }); // ToDo: This can be cleaned up
     } catch (error) {
+        res.status(401).json({ challengePassed: false });
         next(error);
     }
 }

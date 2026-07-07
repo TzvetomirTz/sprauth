@@ -1,4 +1,5 @@
 import { generateSafeRandomString, getSecretKey, sign } from './sec.service.js';
+import { storeChallenge } from './redis.service.js'
 
 // const accessTokenTtl = process.env.SPRAUTH_ACCESS_TOKEN_TTL || 3600000; // 1hr default
 // const refreshTokenTtl = process.env.SPRAUTH_REFRESH_TOKEN_TTL || 604800000; // 1wk default
@@ -7,6 +8,7 @@ export const generateChallengeToken = async (identity: string, intent: string, c
     const issuedAtUnixMs = Date.now();
     const challengeString = generateSafeRandomString();
     const secretKey = getSecretKey();
+    const tokenId = crypto.randomUUID();
 
     const challenge = sign({
         ...customClaims,
@@ -14,8 +16,10 @@ export const generateChallengeToken = async (identity: string, intent: string, c
         identity,
         intent,
         challenge: challengeString,
-        tokenId: crypto.randomUUID()
+        tokenId
     }, secretKey);
+
+    storeChallenge(tokenId);
 
     return challenge;
 }

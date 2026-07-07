@@ -9,7 +9,7 @@ export const handleAuthReq = async (
 ): Promise<void> => {
     try {
         const {challengeJwt, signature, publicKey} = req.body;
-        const payload = verifySprauthSigned(challengeJwt);
+        const payload = await verifySprauthSigned(challengeJwt);
         const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
 
         if (!result.success) {
