@@ -16,7 +16,10 @@ Sprauth is a passwordless authentication API built around post-quantum signature
 - Run a single test file: `npx vitest run src/services/sec.service.test.ts`.
 - `npx tsx scripts/keygen.tsx` — generate a new ML-DSA-65 keypair and print `MLDSA_PRIVATE_KEY` / `MLDSA_PUBLIC_KEY` / `MLDSA_ADDRESS` (base64/hex) to stdout.
 - `npx tsx scripts/derive_pubk.tsx` — derive and print the public key + address from `SPRAUTH_MLDSA_PRIVATE_KEY` in the environment.
+- `SPRAUTH_BASE_URL=http://localhost:3000 npx tsx scripts/demo_login.tsx` — generates a fresh client keypair, runs the full `/challenge/init` → sign → `/auth` flow against a running server, and prints the resulting tokens plus values you can paste into Postman to replay `Verify Challenge`/`Authenticate` manually.
 - `docker build -t sprauth-api .` / `docker run -p 3000:3000 sprauth-api` — build/run the multi-stage Docker image (builder compiles TS, runner ships only `dist/` + prod deps).
+
+`postman/sprauth.postman_collection.json` (+ `postman/sprauth.local.postman_environment.json`) covers every route. Postman can't do ML-DSA-65 signing itself, so `Verify Challenge`/`Authenticate` need `clientPublicKey`/`signature` supplied externally — `scripts/demo_login.tsx` produces those.
 
 Node 20+ required. This is an ESM package (`"type": "module"`) with `NodeNext` module resolution — relative imports must use `.js` extensions even in `.ts` source files (e.g. `import { x } from './sec.service.js'`).
 
