@@ -43,9 +43,8 @@ export const handleVerifyChallengeReq = async (
             return;
         }
 
-        res.status(401).json({ challengePassed: false }); // ToDo: This can be cleaned up
-    } catch (error) {
         res.status(401).json({ challengePassed: false });
+    } catch (error) {
         next(error);
     }
 }

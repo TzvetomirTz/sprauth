@@ -19,7 +19,7 @@ export const generateChallengeToken = async (identity: string, intent: string, c
         tokenId
     }, secretKey);
 
-    storeChallenge(tokenId);
+    await storeChallenge(tokenId);
 
     return challenge;
 }

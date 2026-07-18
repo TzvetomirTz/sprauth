@@ -8,6 +8,10 @@ vi.mock('./sec.service.js', () => ({
     sign: vi.fn(),
 }));
 
+vi.mock('./redis.service.js', () => ({
+    storeChallenge: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('auth.service - generateChallengeToken', () => {
     const MOCK_TIME = 1780775020000;
     const MOCK_RANDOM_STRING = 'mocked-random-challenge-string';
@@ -42,6 +46,7 @@ describe('auth.service - generateChallengeToken', () => {
                 identity: 'mock-identity',
                 intent: 'mock-intent',
                 challenge: MOCK_RANDOM_STRING,
+                tokenId: expect.any(String),
             },
             MOCK_SECRET_KEY
         );
@@ -58,6 +63,7 @@ describe('auth.service - generateChallengeToken', () => {
                 identity: 'mock-identity',
                 intent: 'mock-intent',
                 challenge: MOCK_RANDOM_STRING,
+                tokenId: expect.any(String),
             },
             MOCK_SECRET_KEY
         );
@@ -80,7 +86,8 @@ describe('auth.service - generateChallengeToken', () => {
                 iat: MOCK_TIME,
                 identity: 'real-identity',
                 intent: 'real-intent',
-                challenge: MOCK_RANDOM_STRING
+                challenge: MOCK_RANDOM_STRING,
+                tokenId: expect.any(String),
             },
             MOCK_SECRET_KEY
         );

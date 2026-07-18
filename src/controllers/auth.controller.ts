@@ -23,8 +23,8 @@ export const handleAuthReq = async (
 
         res.status(200).json({
             challengePassed: true,
-            accessToken: generateAuthToken(challengeJwt, "accessToken"),
-            refreshToken: generateAuthToken(challengeJwt, "refreshToken")
+            accessToken: generateAuthToken(payload, "accessToken"),
+            refreshToken: generateAuthToken(payload, "refreshToken")
         });
     } catch (error) {
         next(error);
