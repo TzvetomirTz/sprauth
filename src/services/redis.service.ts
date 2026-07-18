@@ -25,6 +25,16 @@ export const storeChallenge = async (tokenId: string) => {
     });
 }
 
+export const checkIsChallengeValid = async (tokenId: string) : Promise<boolean> => {
+    const challenge = await redisClient.get(`${redisChallengeNamespace}:${tokenId}`);
+
+    if (challenge) {
+        return true;
+    }
+
+    return false;
+}
+
 export const consumeChallenge = async (tokenId: string) => {
     const challenge = await redisClient.getDel(`${redisChallengeNamespace}:${tokenId}`);
 
@@ -35,13 +45,28 @@ export const consumeChallenge = async (tokenId: string) => {
     return challenge;
 }
 
-// New ones start here:
-
 export const startSession = async (identity:string, sessionId: string) => {
     await redisClient.set(`${redisSessionNamespace}:${identity}:${sessionId}`, sessionId, {
         expiration: { type: 'EX', value: sessionTtl }
     });
 }
+
+export const getAllUserSessions = async (identity: string): Promise<string[]> => {
+    const pattern = `${redisSessionNamespace}:${identity}:*`;
+    const sessionKeys: string[] = [];
+
+    for await (const keysBatch of redisClient.scanIterator({ MATCH: pattern })) {
+        sessionKeys.push(...keysBatch);
+    }
+
+    if (sessionKeys.length === 0) {
+        return [];
+    }
+
+    const sessions = await redisClient.mGet(sessionKeys);
+
+    return sessions.filter((session): session is string => session !== null);
+};
 
 export const checkIsSessionValid = async (identity:string, sessionId: string, renewTtl: boolean) : Promise<boolean> => {
     const sessionKey = `${redisSessionNamespace}:${identity}:${sessionId}`;
