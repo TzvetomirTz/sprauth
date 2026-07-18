@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
-import * as secService from './sec.service';
+import * as secService from './sec.service.js';
+
+vi.mock('./redis.service.js', () => ({
+  consumeChallenge: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe('Security Service (sec.service.ts)', () => {
   describe('Initialization & Key Management', () => {
@@ -43,24 +47,24 @@ describe('Security Service (sec.service.ts)', () => {
       const parts = token.split('.');
       expect(parts.length).toBe(3);
 
-      const decoded = secService.verifySprauthSigned(token);
+      const decoded = await secService.verifySprauthSigned(token);
       expect(decoded).toEqual(payload);
     });
 
-    it('should throw an error on invalid JWT format', () => {
-      expect(() => secService.verifySprauthSigned('invalid.token'))
-        .toThrow('Invalid JWT format');
+    it('should throw an error on invalid JWT format', async () => {
+      await expect(secService.verifySprauthSigned('invalid.token'))
+        .rejects.toThrow('Invalid JWT format');
     });
 
     it('should throw an error if the signature is tampered with', async () => {
       const payload = { test: true };
       const secretKey = secService.getSecretKey();
-      
+
       const token = await secService.sign(payload, secretKey);
       const tamperedToken = token.slice(0, -5) + 'xxxxx';
 
-      expect(() => secService.verifySprauthSigned(tamperedToken))
-        .toThrow('Signature verification failed');
+      await expect(secService.verifySprauthSigned(tamperedToken))
+        .rejects.toThrow('Signature verification failed');
     });
   });
 
