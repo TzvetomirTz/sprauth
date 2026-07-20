@@ -157,6 +157,39 @@
           "response": []
         },
         {
+          "name": "Refresh Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/session/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["session", "refresh"]
+            },
+            "description": "Verifies the server's own signature on `refreshToken` (rejecting anything that isn't a `tokenType: \"refreshToken\"` token), then checks that the session baked into the token is still valid in Redis (renewing its TTL). On success, mints and returns a fresh `accessToken`/`refreshToken` pair for the same session."
+          },
+          "response": []
+        },
+        {
           "name": "List Sessions",
           "request": {
             "method": "GET",

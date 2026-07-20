@@ -6,7 +6,7 @@ import {
     endSession,
     endUserSessions
 } from '../services/redis.service.js';
-import { verifyChallengeSignature, verifySprauthSigned } from '../services/sec.service.js';
+import { verifyChallengeSignature, verifySelfSigned, verifySprauthSigned } from '../services/sec.service.js';
 import { generateAuthToken } from '../services/auth.service.js';
 
 export const handleAuthReq = async (
@@ -32,15 +32,67 @@ export const handleAuthReq = async (
         const sessionId = crypto.randomUUID();
         await startSession(payload.identity, sessionId);
 
+        // sessionId is baked into the signed tokens so /session/refresh can trust
+        // it without the caller having to (or being able to lie about) supplying it.
+        const tokenPayload = { ...payload, sessionId };
+
         res.status(200).json({
             challengePassed: true,
-            accessToken: generateAuthToken(payload, "accessToken"),
-            refreshToken: generateAuthToken(payload, "refreshToken"),
+            accessToken: generateAuthToken(tokenPayload, "accessToken"),
+            refreshToken: generateAuthToken(tokenPayload, "refreshToken"),
             sessionId
         });
     } catch (error) {
         res.status(401).json({
             challengePassed: false,
+            accessToken: null,
+            refreshToken: null,
+            sessionId: null
+        });
+
+        next(error);
+    }
+}
+
+export const handleRefreshReq = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken || typeof refreshToken !== 'string' || refreshToken.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'refreshToken' body parameter." });
+            return;
+        }
+
+        const payload = verifySelfSigned(refreshToken);
+
+        if (payload.tokenType !== 'refreshToken') {
+            res.status(401).json({ error: 'Token is not a refresh token.' });
+            return;
+        }
+
+        if (!payload.identity || !payload.sessionId) {
+            res.status(401).json({ error: 'Refresh token is missing identity or session information.' });
+            return;
+        }
+
+        const isSessionValid = await checkIsSessionValid(payload.identity, payload.sessionId, true);
+
+        if (!isSessionValid) {
+            res.status(401).json({ error: 'Session is not valid or has expired.' });
+            return;
+        }
+
+        res.status(200).json({
+            accessToken: generateAuthToken(payload, "accessToken"),
+            refreshToken: generateAuthToken(payload, "refreshToken"),
+            sessionId: payload.sessionId
+        });
+    } catch (error) {
+        res.status(401).json({
             accessToken: null,
             refreshToken: null,
             sessionId: null

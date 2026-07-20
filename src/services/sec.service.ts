@@ -45,14 +45,17 @@ export const sign = (payload: object, secretKey: Uint8Array) => {
   return `${signingInput}.${encodedSignature}`;
 }
 
-export const verifySprauthSigned = async (token: string) => {
+// Verifies the ML-DSA signature over a self-issued token and returns its payload.
+// Does not touch Redis — safe to call repeatedly (access/refresh tokens), unlike
+// verifySprauthSigned() which also consumes the one-time challenge entry.
+export const verifySelfSigned = (token: string) => {
   const parts = token.split('.');
-  
+
   if (parts.length !== 3) {
     throw new Error('Invalid JWT format');
   }
 
-  const encodedHeader = parts[0]!; 
+  const encodedHeader = parts[0]!;
   const encodedPayload = parts[1]!;
   const encodedSignature = parts[2]!;
 
@@ -68,11 +71,16 @@ export const verifySprauthSigned = async (token: string) => {
   }
 
   const decodedPayload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
-  const tokenId = JSON.parse(decodedPayload).tokenId;
-
-  await consumeChallenge(tokenId);
 
   return JSON.parse(decodedPayload);
+}
+
+export const verifySprauthSigned = async (token: string) => {
+  const payload = verifySelfSigned(token);
+
+  await consumeChallenge(payload.tokenId);
+
+  return payload;
 }
 
 export const verifyChallengeSignature = async (
