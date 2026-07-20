@@ -45,9 +45,6 @@ export const sign = (payload: object, secretKey: Uint8Array) => {
   return `${signingInput}.${encodedSignature}`;
 }
 
-// Verifies the ML-DSA signature over a self-issued token and returns its payload.
-// Does not touch Redis — safe to call repeatedly (access/refresh tokens), unlike
-// verifySprauthSigned() which also consumes the one-time challenge entry.
 export const verifySelfSigned = (token: string) => {
   const parts = token.split('.');
 
