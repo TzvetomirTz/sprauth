@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import express from 'express';
 import {
-    handleStartSessionReq,
+    handleAuthReq,
     handleListSessionsReq,
     handleCheckSessionValidReq,
     handleEndSessionReq,
@@ -10,7 +10,7 @@ import {
 
 const sessionRouter = Router();
 
-sessionRouter.post('/start', express.json(), handleStartSessionReq);
+sessionRouter.post('/auth', express.json(), handleAuthReq);
 sessionRouter.get('/', handleListSessionsReq);
 sessionRouter.get('/valid', handleCheckSessionValidReq);
 sessionRouter.post('/end', express.json(), handleEndSessionReq);

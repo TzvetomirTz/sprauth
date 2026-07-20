@@ -38,8 +38,8 @@ const main = async () => {
   const signatureBytes = ml_dsa65.sign(messageBytes, secretKey);
   const signatureBase64 = Buffer.from(signatureBytes).toString('base64');
 
-  console.log(`POST ${baseUrl}/auth/`);
-  const authRes = await fetch(`${baseUrl}/auth/`, {
+  console.log(`POST ${baseUrl}/session/auth`);
+  const authRes = await fetch(`${baseUrl}/session/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -54,6 +54,7 @@ const main = async () => {
 
   if (authBody.accessToken) {
     console.log('\nDecoded accessToken payload:', decodeJwtPayload(authBody.accessToken));
+    console.log(`Session ID:`, authBody.sessionId);
   }
 
   console.log('\n--- Paste into Postman collection variables to replay Verify/Authenticate manually ---');

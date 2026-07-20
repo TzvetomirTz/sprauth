@@ -16,7 +16,7 @@ Sprauth is a passwordless authentication API built around post-quantum signature
 - Run a single test file: `npx vitest run src/services/sec.service.test.ts`.
 - `npx tsx scripts/keygen.tsx` — generate a new ML-DSA-65 keypair and print `MLDSA_PRIVATE_KEY` / `MLDSA_PUBLIC_KEY` / `MLDSA_ADDRESS` (base64/hex) to stdout.
 - `npx tsx scripts/derive_pubk.tsx` — derive and print the public key + address from `SPRAUTH_MLDSA_PRIVATE_KEY` in the environment.
-- `SPRAUTH_BASE_URL=http://localhost:3000 npx tsx scripts/demo_login.tsx` — generates a fresh client keypair, runs the full `/challenge/init` → sign → `/auth` flow against a running server, and prints the resulting tokens plus values you can paste into Postman to replay `Verify Challenge`/`Authenticate` manually.
+- `SPRAUTH_BASE_URL=http://localhost:3000 npx tsx scripts/demo_login.tsx` — generates a fresh client keypair, runs the full `/challenge/init` → sign → `/session/auth` flow against a running server, and prints the resulting tokens plus values you can paste into Postman to replay `Verify Challenge`/`Authenticate` manually.
 - `docker build -t sprauth-api .` / `docker run -p 3000:3000 sprauth-api` — build/run the multi-stage Docker image (builder compiles TS, runner ships only `dist/` + prod deps).
 
 `postman/sprauth.postman_collection.json` (+ `postman/sprauth.local.postman_environment.json`) covers every route. Postman can't do ML-DSA-65 signing itself, so `Verify Challenge`/`Authenticate` need `clientPublicKey`/`signature` supplied externally — `scripts/demo_login.tsx` produces those.
@@ -37,13 +37,13 @@ In tests, `src/tests/setup.ts` auto-generates a fresh keypair and sets `SPRAUTH_
 
 Layered Express app: `routes/` (wire HTTP verbs/paths, attach `express.json()`) → `controllers/` (parse/validate request, call services, shape response, `next(error)` on failure) → `services/` (crypto, business logic, Redis). There is currently no centralized error-handling middleware in `src/app.ts`, so unhandled errors passed to `next()` fall through to Express's default handler.
 
-Four route groups mounted in `src/app.ts`:
+Three route groups mounted in `src/app.ts`:
 - `GET /sec/key/public` — returns the server's ML-DSA public key (base64).
 - `POST /challenge/init` — client submits `{ identity, intent, customClaims }`; server generates a signed challenge JWT-like token and stores its `tokenId` in Redis (`challenge:<tokenId>`, TTL-bound). `customClaims` is spread *before* the reserved fields (`iat`, `identity`, `intent`, `challenge`, `tokenId`) so it cannot override them.
 - `POST /challenge/verify` — client returns `{ challengeJwt, signature, publicKey }`; server verifies the challenge's own signature (`verifySprauthSigned`, which also consumes/deletes the Redis challenge entry — single use) and then verifies the client's signature over the challenge string against the claimed identity (`verifyChallengeSignature`, which re-derives the `pqc1...` address from the supplied public key and compares).
 - `GET /challenge/valid` (query `tokenId`) — checks whether a challenge is still pending/unconsumed in Redis (`checkIsChallengeValid`).
-- `POST /auth/` — same verification as `/challenge/verify`, but on success mints `accessToken` and `refreshToken` (also ML-DSA-signed tokens, via `generateAuthToken`) instead of a boolean.
-- `POST /session/start`, `GET /session/` (query `identity`), `GET /session/valid` (query `identity`, `sessionId`, `renewTtl`), `POST /session/end`, `POST /session/revoke` — thin wrappers over the Redis session functions (`src/controllers/session.controller.ts`). **These do not verify caller identity** — `identity` is taken as-is from the request, not derived from a verified token. Since `pqc1...` addresses aren't secret, anyone who knows/guesses an address can currently list/end/revoke that identity's sessions. Fine for now since nothing else creates real sessions yet (see below), but gate this behind access-token verification before relying on it.
+- `POST /session/auth` — same verification as `/challenge/verify`, but on success mints `accessToken` and `refreshToken` (also ML-DSA-signed tokens, via `generateAuthToken`), starts a Redis session for the identity (`startSession`), and returns the resulting `sessionId` alongside the tokens. Lives under `/session` (not `/auth`) because minting tokens and opening the session are one operation now — there's no standalone "start a session" call.
+- `GET /session/` (query `identity`), `GET /session/valid` (query `identity`, `sessionId`, `renewTtl`), `POST /session/end`, `POST /session/revoke` — thin wrappers over the Redis session functions (`src/controllers/session.controller.ts`). **These do not verify caller identity** — `identity` is taken as-is from the request, not derived from a verified token. Since `pqc1...` addresses aren't secret, anyone who knows/guesses an address can currently list/end/revoke that identity's sessions. Fine for now, but gate this behind access-token verification before relying on it.
 
 ### Token format
 
@@ -61,7 +61,7 @@ Single shared client connected at module load. Two key namespaces:
 - `challenge:<tokenId>` — one-time challenge tokens, deleted on consumption via `getDel` (`consumeChallenge` throws if already consumed/missing — enforces single use).
 - `session:<identity>:<sessionId>` — per-identity sessions; supports listing all sessions for an identity (`getAllUserSessions`, via `scanIterator`), validating with optional TTL renewal (`checkIsSessionValid`), and bulk revocation except a keep-list (`endUserSessions`, uses `unlink`).
 
-Session management (`startSession`, `endSession`, `endUserSessions`, `getAllUserSessions`) is exposed via the `/session` routes above, but nothing calls `startSession` as part of `/auth` — issuing an access/refresh token does not currently create a corresponding Redis session entry, so the session store and the token-issuing flow are still disconnected in practice.
+Session management (`startSession`, `endSession`, `endUserSessions`, `getAllUserSessions`) is exposed via the `/session` routes above. `startSession` is called from `handleAuthReq` (`POST /session/auth`) on successful challenge verification, so issuing an access/refresh token now also creates the corresponding Redis session entry.
 
 ## Testing conventions
 
