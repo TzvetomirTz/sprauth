@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b6f4a3d2-8e1c-4c2a-9f0a-3d5e7c1a9b21",
     "name": "Sprauth",
-    "description": "Passwordless, post-quantum (ML-DSA-65) challenge-response authentication API.\n\nFlow:\n1. POST /challenge/init to get a server-signed challenge.\n2. Sign the decoded `challenge` string from that token with your client ML-DSA-65 private key (Postman cannot do this natively — see the `signature` / `clientPublicKey` variable notes below).\n3. POST /challenge/verify (just checks the proof) or POST /auth (checks the proof and also mints access/refresh tokens).\n\nCollection variables are used throughout so requests can be chained without manual copy/paste; several requests have test scripts that populate them automatically from responses.",
+    "description": "Passwordless, post-quantum (ML-DSA-65) challenge-response authentication API.\n\nFlow:\n1. POST /challenge/init to get a server-signed challenge.\n2. Sign the decoded `challenge` string from that token with your client ML-DSA-65 private key (Postman cannot do this natively — see the `signature` / `clientPublicKey` variable notes below).\n3. POST /challenge/valid to check (and optionally consume) the challenge's pending status, or POST /session/auth (checks the proof and also mints access/refresh tokens).\n\nCollection variables are used throughout so requests can be chained without manual copy/paste; several requests have test scripts that populate them automatically from responses.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -83,33 +83,18 @@
         {
           "name": "Check Challenge Valid",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/challenge/valid?tokenId={{tokenId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["challenge", "valid"],
-              "query": [{ "key": "tokenId", "value": "{{tokenId}}" }]
-            },
-            "description": "Checks whether a challenge's tokenId is still pending (unconsumed) in Redis. Run this before Verify Challenge / Authenticate to confirm it hasn't expired or already been used."
-          },
-          "response": []
-        },
-        {
-          "name": "Verify Challenge",
-          "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"challengeJwt\": \"{{challengeJwt}}\",\n  \"signature\": \"{{signature}}\",\n  \"publicKey\": \"{{clientPublicKey}}\"\n}"
+              "raw": "{\n  \"identity\": \"{{identity}}\",\n  \"tokenId\": \"{{tokenId}}\",\n  \"consume\": false\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/challenge/verify",
+              "raw": "{{baseUrl}}/challenge/valid",
               "host": ["{{baseUrl}}"],
-              "path": ["challenge", "verify"]
+              "path": ["challenge", "valid"]
             },
-            "description": "Verifies the server-signed challenge and the client's proof-of-possession signature over `challengeString`, without issuing tokens. Consumes the challenge (single use) regardless of outcome.\n\n`signature` = ML-DSA-65 signature over the raw `challengeString` bytes, produced with the client's private key.\n`publicKey` = the client's ML-DSA-65 public key (base64); its derived `pqc1...` address must match `identity`."
+            "description": "Checks whether a challenge's tokenId is still pending (unconsumed) in Redis for `identity`. Set `consume` to `true` to atomically remove it as part of the check (single use) — e.g. to redeem it once a client has proven possession out-of-band; leave `false` to just poll status (before Authenticate, to confirm it hasn't expired or already been used)."
           },
           "response": []
         }
@@ -152,7 +137,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["session", "auth"]
             },
-            "description": "Same verification as Verify Challenge, but on success mints `accessToken` and `refreshToken` (self-issued, ML-DSA-signed) and starts a new Redis-backed session for the identity, returning its `sessionId`. Consumes the challenge (single use) regardless of outcome.\n\nNote: uses the same challenge JWT as Verify Challenge — a challenge can only be redeemed once, by whichever of the two endpoints you call first."
+            "description": "Verifies the server-signed challenge and the client's proof-of-possession signature over `challengeString`, then on success mints `accessToken` and `refreshToken` (self-issued, ML-DSA-signed) and starts a new Redis-backed session for the identity, returning its `sessionId`. Consumes the challenge (single use) regardless of outcome.\n\n`signature` = ML-DSA-65 signature over the raw `challengeString` bytes, produced with the client's private key.\n`publicKey` = the client's ML-DSA-65 public key (base64); its derived `pqc1...` address must match `identity`."
           },
           "response": []
         },

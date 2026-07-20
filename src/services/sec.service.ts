@@ -75,7 +75,7 @@ export const verifySelfSigned = (token: string) => {
 export const verifySprauthSigned = async (token: string) => {
   const payload = verifySelfSigned(token);
 
-  await consumeChallenge(payload.tokenId);
+  await consumeChallenge(payload.identity, payload.tokenId);
 
   return payload;
 }
