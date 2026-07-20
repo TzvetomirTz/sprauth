@@ -31,9 +31,6 @@ export const handleAuthReq = async (
 
         const sessionId = crypto.randomUUID();
         await startSession(payload.identity, sessionId);
-
-        // sessionId is baked into the signed tokens so /session/refresh can trust
-        // it without the caller having to (or being able to lie about) supplying it.
         const tokenPayload = { ...payload, sessionId };
 
         res.status(200).json({
