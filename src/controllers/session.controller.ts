@@ -6,25 +6,46 @@ import {
     endSession,
     endUserSessions
 } from '../services/redis.service.js';
+import { verifyChallengeSignature, verifySprauthSigned } from '../services/sec.service.js';
+import { generateAuthToken } from '../services/auth.service.js';
 
-export const handleStartSessionReq = async (
+export const handleAuthReq = async (
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { identity } = req.body;
+        const {challengeJwt, signature, publicKey} = req.body;
+        const payload = await verifySprauthSigned(challengeJwt);
+        const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
 
-        if (!identity || typeof identity !== 'string' || identity.trim() === '') {
-            res.status(400).json({ error: "Missing or invalid 'identity' body parameter." });
+        if (!result.success) {
+            res.status(401).json({
+                challengePassed: false,
+                accessToken: null,
+                refreshToken: null,
+                sessionId: null
+            });
             return;
         }
 
         const sessionId = crypto.randomUUID();
-        await startSession(identity, sessionId);
+        await startSession(payload.identity, sessionId);
 
-        res.status(200).json({ sessionId });
+        res.status(200).json({
+            challengePassed: true,
+            accessToken: generateAuthToken(payload, "accessToken"),
+            refreshToken: generateAuthToken(payload, "refreshToken"),
+            sessionId
+        });
     } catch (error) {
+        res.status(401).json({
+            challengePassed: false,
+            accessToken: null,
+            refreshToken: null,
+            sessionId: null
+        });
+
         next(error);
     }
 }

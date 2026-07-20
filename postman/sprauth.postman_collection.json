@@ -116,7 +116,7 @@
       ]
     },
     {
-      "name": "Auth",
+      "name": "Session",
       "item": [
         {
           "name": "Authenticate",
@@ -130,6 +130,7 @@
                   "  const body = pm.response.json();",
                   "  pm.collectionVariables.set('accessToken', body.accessToken);",
                   "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "  pm.collectionVariables.set('sessionId', body.sessionId);",
                   "}",
                   "",
                   "pm.test('challengePassed reflected in response', () => {",
@@ -147,47 +148,11 @@
               "raw": "{\n  \"challengeJwt\": \"{{challengeJwt}}\",\n  \"signature\": \"{{signature}}\",\n  \"publicKey\": \"{{clientPublicKey}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/",
+              "raw": "{{baseUrl}}/session/auth",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", ""]
+              "path": ["session", "auth"]
             },
-            "description": "Same verification as Verify Challenge, but on success mints `accessToken` and `refreshToken` (self-issued, ML-DSA-signed) instead of just a boolean. Consumes the challenge (single use) regardless of outcome.\n\nNote: uses the same challenge JWT as Verify Challenge — a challenge can only be redeemed once, by whichever of the two endpoints you call first."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Session",
-      "item": [
-        {
-          "name": "Start Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  pm.collectionVariables.set('sessionId', pm.response.json().sessionId);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"identity\": \"{{identity}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/session/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["session", "start"]
-            },
-            "description": "Creates a new Redis-backed session for `identity` with a server-generated `sessionId`. Populates the `sessionId` collection variable on success.\n\nNote: not currently called as part of Authenticate — sessions here are independent of access/refresh token issuance."
+            "description": "Same verification as Verify Challenge, but on success mints `accessToken` and `refreshToken` (self-issued, ML-DSA-signed) and starts a new Redis-backed session for the identity, returning its `sessionId`. Consumes the challenge (single use) regardless of outcome.\n\nNote: uses the same challenge JWT as Verify Challenge — a challenge can only be redeemed once, by whichever of the two endpoints you call first."
           },
           "response": []
         },

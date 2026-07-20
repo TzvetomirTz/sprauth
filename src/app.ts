@@ -2,7 +2,6 @@ import express from 'express';
 import challengeRouter from './routes/challenge.route.js';
 import cors from 'cors';
 import secRouter from './routes/sec.route.js';
-import authRouter from './routes/auth.route.js';
 import sessionRouter from './routes/session.route.js';
 
 const app = express();
@@ -14,7 +13,6 @@ app.use(cors({
 
 app.use('/sec/', secRouter);
 app.use('/challenge/', challengeRouter);
-app.use('/auth/', authRouter);
 app.use('/session/', sessionRouter);
 
 app.listen(PORT, () => {
