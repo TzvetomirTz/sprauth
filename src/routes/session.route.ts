@@ -2,6 +2,7 @@ import { Router } from 'express';
 import express from 'express';
 import {
     handleAuthReq,
+    handleRefreshReq,
     handleListSessionsReq,
     handleCheckSessionValidReq,
     handleEndSessionReq,
@@ -11,6 +12,7 @@ import {
 const sessionRouter = Router();
 
 sessionRouter.post('/auth', express.json(), handleAuthReq);
+sessionRouter.post('/refresh', express.json(), handleRefreshReq);
 sessionRouter.get('/', handleListSessionsReq);
 sessionRouter.get('/valid', handleCheckSessionValidReq);
 sessionRouter.post('/end', express.json(), handleEndSessionReq);
