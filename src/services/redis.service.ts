@@ -19,24 +19,23 @@ redisClient.on('error', (err) => console.error('Redis Client Error', err));
 })();
 
 
-export const storeChallenge = async (tokenId: string) => {
-    await redisClient.set(`${redisChallengeNamespace}:${tokenId}`, tokenId, {
+export const storeChallenge = async (identity: string, tokenId: string) => {
+    await redisClient.set(`${redisChallengeNamespace}:${identity}:${tokenId}`, tokenId, {
         expiration: { type: 'EX', value: challengeTtl }
     });
 }
 
-export const checkIsChallengeValid = async (tokenId: string) : Promise<boolean> => {
-    const challenge = await redisClient.get(`${redisChallengeNamespace}:${tokenId}`);
+export const checkIsChallengeValid = async (identity: string, tokenId: string, consume: boolean = false) : Promise<boolean> => {
+    const key = `${redisChallengeNamespace}:${identity}:${tokenId}`;
+    const challenge = consume
+        ? await redisClient.getDel(key)
+        : await redisClient.get(key);
 
-    if (challenge) {
-        return true;
-    }
-
-    return false;
+    return challenge !== null;
 }
 
-export const consumeChallenge = async (tokenId: string) => {
-    const challenge = await redisClient.getDel(`${redisChallengeNamespace}:${tokenId}`);
+export const consumeChallenge = async (identity: string, tokenId: string) => {
+    const challenge = await redisClient.getDel(`${redisChallengeNamespace}:${identity}:${tokenId}`);
 
     if (challenge === null) {
         throw new Error(`Challenge ${tokenId} not found or already consumed`);

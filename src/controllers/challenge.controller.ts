@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
 import { generateChallengeToken } from '../services/auth.service.js';
-import { verifyChallengeSignature, verifySprauthSigned } from '../services/sec.service.js';
 import { checkIsChallengeValid } from '../services/redis.service.js';
 
 export const handleInitChallengeReq = async (
@@ -28,41 +27,30 @@ export const handleInitChallengeReq = async (
     }
 }
 
-export const handleVerifyChallengeReq = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Promise<void> => {
-    try {
-        const {challengeJwt, signature, publicKey} = req.body;
-        const payload = await verifySprauthSigned(challengeJwt);
-        const result = await verifyChallengeSignature(payload.challenge, signature, publicKey, payload.identity);
-
-        if (result.success) {
-            res.status(200).json({ challengePassed: true });
-            return;
-        }
-
-        res.status(401).json({ challengePassed: false });
-    } catch (error) {
-        next(error);
-    }
-}
-
 export const handleCheckChallengeValidReq = async (
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { tokenId } = req.query;
+        const { identity, tokenId, consume } = req.body;
 
-        if (!tokenId || typeof tokenId !== 'string' || tokenId.trim() === '') {
-            res.status(400).json({ error: "Missing or invalid 'tokenId' query parameter." });
+        if (!identity || typeof identity !== 'string' || identity.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'identity' body parameter." });
             return;
         }
 
-        const isValid = await checkIsChallengeValid(tokenId);
+        if (!tokenId || typeof tokenId !== 'string' || tokenId.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'tokenId' body parameter." });
+            return;
+        }
+
+        if (consume !== undefined && typeof consume !== 'boolean') {
+            res.status(400).json({ error: "Invalid 'consume' body parameter, expected a boolean." });
+            return;
+        }
+
+        const isValid = await checkIsChallengeValid(identity, tokenId, consume === true);
 
         res.status(200).json({ valid: isValid });
     } catch (error) {
