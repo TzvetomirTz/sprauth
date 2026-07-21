@@ -43,9 +43,6 @@ export const handleAuthReq = async (
             sessionId
         });
     } catch {
-        // Verification threw (invalid/expired/consumed challenge, bad signature, etc.) — this
-        // is the expected failure path, so respond 401 and stop. Do NOT also call next(error):
-        // the response is already sent, and there is no error middleware to handle it.
         res.status(401).json({
             challengePassed: false,
             accessToken: null,
@@ -80,8 +77,6 @@ export const handleRefreshReq = async (
             return;
         }
 
-        // Check validity WITHOUT renewing — a doomed request (e.g. a replayed, already-consumed
-        // refresh token) must not extend the session's TTL.
         const isSessionValid = await checkIsSessionValid(payload.identity, payload.sessionId, false);
 
         if (!isSessionValid) {
@@ -96,7 +91,6 @@ export const handleRefreshReq = async (
             return;
         }
 
-        // Only now that the refresh has succeeded do we renew the session TTL.
         await renewSession(payload.identity, payload.sessionId);
 
         const tokens = await issueSessionTokens(payload);
@@ -107,8 +101,6 @@ export const handleRefreshReq = async (
             sessionId: payload.sessionId
         });
     } catch {
-        // Verification threw (malformed/tampered refresh token) — expected failure path, so
-        // respond 401 and stop. See handleAuthReq for why next(error) is intentionally omitted.
         res.status(401).json({
             accessToken: null,
             refreshToken: null,
@@ -170,8 +162,6 @@ export const handleEndSessionReq = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        // Identity comes from the verified access token (requireAccessToken), never the
-        // body — a caller can only end their own sessions.
         const identity = req.auth!.identity;
         const { sessionId } = req.body;
 
@@ -194,8 +184,6 @@ export const handleEndUserSessionsReq = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        // Identity comes from the verified access token (requireAccessToken), never the
-        // body — a caller can only revoke their own sessions.
         const identity = req.auth!.identity;
         const { except } = req.body;
 
