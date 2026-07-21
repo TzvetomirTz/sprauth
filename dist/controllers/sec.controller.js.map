@@ -1,1 +1,0 @@
-{"version":3,"file":"sec.controller.js","sourceRoot":"","sources":["../../src/controllers/sec.controller.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,kBAAkB,EAAE,MAAM,4BAA4B,CAAC;AAEhE,MAAM,CAAC,MAAM,qBAAqB,GAAG,KAAK,EACtC,GAAY,EACZ,GAAa,EACf,EAAE;IACA,GAAG,CAAC,MAAM,CAAC,GAAG,CAAC,CAAC,IAAI,CAAC,EAAC,SAAS,EAAE,kBAAkB,EAAE,EAAC,CAAC,CAAA;AAC3D,CAAC,CAAA"}
