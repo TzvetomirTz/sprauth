@@ -212,17 +212,20 @@
           "name": "End Session",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identity\": \"{{identity}}\",\n  \"sessionId\": \"{{sessionId}}\"\n}"
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/session/end",
               "host": ["{{baseUrl}}"],
               "path": ["session", "end"]
             },
-            "description": "Ends a single session (e.g. logout on one device)."
+            "description": "Ends a single session (e.g. logout on one device). Requires a valid access token as `Authorization: Bearer <accessToken>`; the identity is derived from the token, so only the caller's own sessions can be ended."
           },
           "response": []
         },
@@ -230,17 +233,83 @@
           "name": "Revoke Other Sessions",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identity\": \"{{identity}}\",\n  \"except\": [\"{{sessionId}}\"]\n}"
+              "raw": "{\n  \"except\": [\"{{sessionId}}\"]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/session/revoke",
               "host": ["{{baseUrl}}"],
               "path": ["session", "revoke"]
             },
-            "description": "Ends all of `identity`'s sessions except the ones listed in `except` (e.g. \"log out everywhere else\"). Pass an empty array to end every session."
+            "description": "Ends all of the caller's sessions except the ones listed in `except` (e.g. \"log out everywhere else\"). Pass an empty array to end every session. Requires a valid access token as `Authorization: Bearer <accessToken>`; the identity is derived from the token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Count User Active Challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/challenges/count?identity={{identity}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "challenges", "count"],
+              "query": [{ "key": "identity", "value": "{{identity}}" }]
+            },
+            "description": "Counts `identity`'s currently pending (unconsumed) challenges in Redis."
+          },
+          "response": []
+        },
+        {
+          "name": "Count All Active Challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/challenges/count/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "challenges", "count", "all"]
+            },
+            "description": "Counts every currently pending (unconsumed) challenge in Redis, across all identities."
+          },
+          "response": []
+        },
+        {
+          "name": "Count User Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions/count?identity={{identity}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions", "count"],
+              "query": [{ "key": "identity", "value": "{{identity}}" }]
+            },
+            "description": "Counts `identity`'s currently active sessions in Redis."
+          },
+          "response": []
+        },
+        {
+          "name": "Count All Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions/count/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions", "count", "all"]
+            },
+            "description": "Counts every currently active session in Redis, across all identities."
           },
           "response": []
         }

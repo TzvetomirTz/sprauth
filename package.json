@@ -16,6 +16,7 @@
   "main": "dist/app.js",
   "scripts": {
     "test": "vitest",
+    "test:e2e": "vitest run src/tests/e2e",
     "test:coverage": "vitest run --coverage",
     "build": "tsc",
     "start": "node dist/app.js",
@@ -25,12 +26,14 @@
     "@noble/post-quantum": "^0.6.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-list-endpoints": "^7.1.1",
     "redis": "^6.1.0"
   },
   "devDependencies": {
     "@types/base64url": "^2.0.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/express-list-endpoints": "^6.0.3",
     "@types/node": "^25.9.4",
     "@types/supertest": "^7.2.0",
     "nodemon": "^3.1.14",
