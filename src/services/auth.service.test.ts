@@ -10,6 +10,8 @@ vi.mock('./sec.service.js', () => ({
 
 vi.mock('./redis.service.js', () => ({
     storeChallenge: vi.fn().mockResolvedValue(undefined),
+    storeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    storeAccessToken: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('auth.service - generateChallengeToken', () => {

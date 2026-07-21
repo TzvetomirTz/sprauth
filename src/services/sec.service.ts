@@ -88,9 +88,9 @@ export const verifyChallengeSignature = async (
 ) => {
     try {
         const pubKeyBytes = new Uint8Array(Buffer.from(publicKeyBase64, 'base64'));
-        const hash = createHash('sha256').update(pubKeyBytes).digest();
-        const last20Bytes = hash.subarray(-20);
-        const derivedAddress = `pqc1${last20Bytes.toString('hex')}`;
+        // Single source of truth for address derivation — also enforces the 1952-byte
+        // ML-DSA-65 key length (throws, caught below as a verification failure).
+        const derivedAddress = derivePQCAddress(pubKeyBytes);
 
         if (derivedAddress !== claimedAddress) {
             throw new Error("Address mismatch: The provided Public Key does not match the identity.");
