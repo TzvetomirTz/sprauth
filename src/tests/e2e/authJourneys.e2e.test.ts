@@ -34,17 +34,17 @@ describe('Auth journeys (E2E)', () => {
         expect(typeof challenge.tokenId).toBe('string');
 
         // The freshly-issued challenge is pending — a non-consuming poll sees it.
-        const pollRes = await client.checkChallenge(challenge.tokenId, false);
+        const pollRes = await client.checkChallenge(initRes.body.challengeToken, false);
         expect(pollRes.status).toBe(200);
         expect(pollRes.body.valid).toBe(true);
 
         // 2. Consume challenge — still reported valid, but atomically removed.
-        const consumeRes = await client.checkChallenge(challenge.tokenId, true);
+        const consumeRes = await client.checkChallenge(initRes.body.challengeToken, true);
         expect(consumeRes.status).toBe(200);
         expect(consumeRes.body.valid).toBe(true);
 
         // Once consumed, the challenge is gone: a follow-up poll is no longer valid.
-        const afterConsumeRes = await client.checkChallenge(challenge.tokenId, false);
+        const afterConsumeRes = await client.checkChallenge(initRes.body.challengeToken, false);
         expect(afterConsumeRes.status).toBe(200);
         expect(afterConsumeRes.body.valid).toBe(false);
     });

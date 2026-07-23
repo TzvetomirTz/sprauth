@@ -89,54 +89,127 @@ describe('Challenge endpoints (E2E)', () => {
         it('reports a pending challenge as valid without consuming it', async () => {
             const client = new SprauthClient(app);
             const init = await client.initChallenge('login');
-            const { tokenId } = decodeTokenPayload(init.body.challengeToken);
 
-            const first = await client.checkChallenge(tokenId, false);
+            const first = await client.checkChallenge(init.body.challengeToken, false);
             expect(first.status).toBe(200);
             expect(first.body.valid).toBe(true);
 
             // Non-consuming poll is repeatable.
-            const second = await client.checkChallenge(tokenId, false);
+            const second = await client.checkChallenge(init.body.challengeToken, false);
             expect(second.body.valid).toBe(true);
         });
 
-        it('reports an unknown tokenId as invalid', async () => {
+        it('reports an already-consumed challenge as invalid', async () => {
             const client = new SprauthClient(app);
-            const res = await client.checkChallenge('does-not-exist', false);
-            expect(res.status).toBe(200);
-            expect(res.body.valid).toBe(false);
+            const init = await client.initChallenge('login');
+
+            const consume = await client.checkChallenge(init.body.challengeToken, true);
+            expect(consume.body.valid).toBe(true);
+
+            const afterConsume = await client.checkChallenge(init.body.challengeToken, false);
+            expect(afterConsume.status).toBe(200);
+            expect(afterConsume.body.valid).toBe(false);
         });
 
         it('consuming a challenge removes it (single use)', async () => {
             const client = new SprauthClient(app);
             const init = await client.initChallenge('login');
-            const { tokenId } = decodeTokenPayload(init.body.challengeToken);
 
-            const consume = await client.checkChallenge(tokenId, true);
+            const consume = await client.checkChallenge(init.body.challengeToken, true);
             expect(consume.body.valid).toBe(true);
 
-            const afterConsume = await client.checkChallenge(tokenId, true);
+            const afterConsume = await client.checkChallenge(init.body.challengeToken, true);
             expect(afterConsume.body.valid).toBe(false);
         });
 
-        it('rejects a missing identity with 400', async () => {
-            const res = await api.post('/challenge/valid').send({ tokenId: 'x' });
-            expect(res.status).toBe(400);
-            expect(res.body.error).toMatch(/identity/i);
+        it('rejects a challenge whose client signature does not match with 401', async () => {
+            const client = new SprauthClient(app);
+            const init = await client.initChallenge('login');
+
+            const res = await client.postCheckChallenge({
+                challengeJwt: init.body.challengeToken,
+                signature: client.sign('not-the-challenge'),
+                publicKey: client.publicKeyBase64,
+                consume: false
+            });
+
+            expect(res.status).toBe(401);
+            expect(res.body.valid).toBe(false);
         });
 
-        it('rejects a missing tokenId with 400', async () => {
-            const res = await api
-                .post('/challenge/valid')
-                .send({ identity: 'pqc1abc' });
+        it("rejects a challenge signed by a different key than the challenge's identity with 401", async () => {
+            const owner = new SprauthClient(app);
+            const attacker = new SprauthClient(app);
+            const init = await owner.initChallenge('login');
+            const { challenge } = decodeTokenPayload(init.body.challengeToken);
+
+            // Attacker signs the correct challenge but presents their own key,
+            // which derives a different address than the challenge's identity.
+            const res = await attacker.postCheckChallenge({
+                challengeJwt: init.body.challengeToken,
+                signature: attacker.sign(challenge),
+                publicKey: attacker.publicKeyBase64,
+                consume: false
+            });
+
+            expect(res.status).toBe(401);
+            expect(res.body.valid).toBe(false);
+        });
+
+        it('rejects a tampered challenge JWT with 401', async () => {
+            const client = new SprauthClient(app);
+            const res = await client.postCheckChallenge({
+                challengeJwt: 'not.a.jwt',
+                signature: client.sign('whatever'),
+                publicKey: client.publicKeyBase64,
+                consume: false
+            });
+
+            expect(res.status).toBe(401);
+            expect(res.body.valid).toBe(false);
+        });
+
+        it('rejects a missing challengeJwt with 400', async () => {
+            const client = new SprauthClient(app);
+            const res = await client.postCheckChallenge({
+                signature: client.sign('x'),
+                publicKey: client.publicKeyBase64
+            });
             expect(res.status).toBe(400);
-            expect(res.body.error).toMatch(/tokenId/i);
+            expect(res.body.error).toMatch(/challengeJwt/i);
+        });
+
+        it('rejects a missing signature with 400', async () => {
+            const client = new SprauthClient(app);
+            const init = await client.initChallenge('login');
+            const res = await client.postCheckChallenge({
+                challengeJwt: init.body.challengeToken,
+                publicKey: client.publicKeyBase64
+            });
+            expect(res.status).toBe(400);
+            expect(res.body.error).toMatch(/signature/i);
+        });
+
+        it('rejects a missing publicKey with 400', async () => {
+            const client = new SprauthClient(app);
+            const init = await client.initChallenge('login');
+            const res = await client.postCheckChallenge({
+                challengeJwt: init.body.challengeToken,
+                signature: client.sign('x')
+            });
+            expect(res.status).toBe(400);
+            expect(res.body.error).toMatch(/publicKey/i);
         });
 
         it('rejects a non-boolean consume flag with 400', async () => {
-            const res = await api
-                .post('/challenge/valid')
-                .send({ identity: 'pqc1abc', tokenId: 'x', consume: 'yes' });
+            const client = new SprauthClient(app);
+            const init = await client.initChallenge('login');
+            const res = await client.postCheckChallenge({
+                challengeJwt: init.body.challengeToken,
+                signature: client.sign('x'),
+                publicKey: client.publicKeyBase64,
+                consume: 'yes'
+            });
             expect(res.status).toBe(400);
             expect(res.body.error).toMatch(/consume/i);
         });

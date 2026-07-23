@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { generateChallengeToken } from '../services/auth.service.js';
 import { checkIsChallengeValid } from '../services/redis.service.js';
+import { verifyChallengeSignature, verifySelfSigned } from '../services/sec.service.js';
 
 export const handleInitChallengeReq = async (
     req: Request,
@@ -41,15 +42,20 @@ export const handleCheckChallengeValidReq = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { identity, tokenId, consume } = req.body;
+        const { challengeJwt, signature, publicKey, consume } = req.body;
 
-        if (!identity || typeof identity !== 'string' || identity.trim() === '') {
-            res.status(400).json({ error: "Missing or invalid 'identity' body parameter." });
+        if (!challengeJwt || typeof challengeJwt !== 'string' || challengeJwt.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'challengeJwt' body parameter." });
             return;
         }
 
-        if (!tokenId || typeof tokenId !== 'string' || tokenId.trim() === '') {
-            res.status(400).json({ error: "Missing or invalid 'tokenId' body parameter." });
+        if (!signature || typeof signature !== 'string' || signature.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'signature' body parameter." });
+            return;
+        }
+
+        if (!publicKey || typeof publicKey !== 'string' || publicKey.trim() === '') {
+            res.status(400).json({ error: "Missing or invalid 'publicKey' body parameter." });
             return;
         }
 
@@ -58,7 +64,30 @@ export const handleCheckChallengeValidReq = async (
             return;
         }
 
-        const isValid = await checkIsChallengeValid(identity, tokenId, consume === true);
+        // Verify the challenge JWT's own server signature (signature-only, so the
+        // Redis entry is not consumed here — the `consume` param governs that below).
+        let payload;
+        try {
+            payload = verifySelfSigned(challengeJwt);
+        } catch {
+            res.status(401).json({ valid: false });
+            return;
+        }
+
+        // Verify the client's signature over the challenge string against the identity.
+        const result = await verifyChallengeSignature(
+            payload.challenge,
+            signature,
+            publicKey,
+            payload.identity
+        );
+
+        if (!result.success) {
+            res.status(401).json({ valid: false });
+            return;
+        }
+
+        const isValid = await checkIsChallengeValid(payload.identity, payload.tokenId, consume === true);
 
         res.status(200).json({ valid: isValid });
     } catch (error) {

@@ -87,14 +87,14 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identity\": \"{{identity}}\",\n  \"tokenId\": \"{{tokenId}}\",\n  \"consume\": false\n}"
+              "raw": "{\n  \"challengeJwt\": \"{{challengeJwt}}\",\n  \"signature\": \"{{signature}}\",\n  \"publicKey\": \"{{clientPublicKey}}\",\n  \"consume\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/challenge/valid",
               "host": ["{{baseUrl}}"],
               "path": ["challenge", "valid"]
             },
-            "description": "Checks whether a challenge's tokenId is still pending (unconsumed) in Redis for `identity`. Set `consume` to `true` to atomically remove it as part of the check (single use) — e.g. to redeem it once a client has proven possession out-of-band; leave `false` to just poll status (before Authenticate, to confirm it hasn't expired or already been used)."
+            "description": "Verifies a challenge the same way Authenticate does — the server checks the challenge JWT's own signature and the client's `signature` over the challenge string against the identity/public key — then reports whether the challenge is still pending (unconsumed) in Redis. Postman can't do ML-DSA-65 signing itself, so `challengeJwt`/`signature`/`clientPublicKey` must be supplied externally (see `scripts/demo_login.tsx`). Set `consume` to `true` to atomically remove the challenge as part of the check (single use); leave `false` to just poll status (before Authenticate, to confirm it hasn't expired or already been used)."
           },
           "response": []
         }
