@@ -63,11 +63,31 @@ export class SprauthClient {
             .send({ identity: this.identity, intent, customClaims });
     }
 
-    /** POST /challenge/valid */
-    checkChallenge(tokenId: string, consume = false) {
+    /**
+     * POST /challenge/valid — signs the challenge embedded in `challengeToken`
+     * with this client's key and checks whether the challenge is still valid.
+     */
+    checkChallenge(challengeToken: string, consume = false) {
+        const { challenge } = decodeTokenPayload(challengeToken);
+
         return this.api
             .post('/challenge/valid')
-            .send({ identity: this.identity, tokenId, consume });
+            .send({
+                challengeJwt: challengeToken,
+                signature: this.sign(challenge),
+                publicKey: this.publicKeyBase64,
+                consume
+            });
+    }
+
+    /** POST /challenge/valid with a fully custom body (for unhappy-path tests). */
+    postCheckChallenge(body: {
+        challengeJwt?: unknown;
+        signature?: unknown;
+        publicKey?: unknown;
+        consume?: unknown;
+    }) {
+        return this.api.post('/challenge/valid').send(body);
     }
 
     /**
